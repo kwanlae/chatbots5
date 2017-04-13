@@ -7,7 +7,7 @@
     "start": "node bot.js"
   },
   "keywords": [],
-  "author": "voidopennet@gmail.com",
+  "author": "kwanlae@gmail.com",
   "license": "MIT",
   "dependencies": {
     "api-ai-botkit": "^1.1.1",
