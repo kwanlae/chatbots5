@@ -1,0 +1,16 @@
+{
+  "name": "slackbot30Minutes",
+  "version": "0.0.2",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "keywords": [],
+  "author": "voidopennet@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "api-ai-botkit": "^1.1.1",
+    "botkit": "^0.5.2"
+  }
+}
