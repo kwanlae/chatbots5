@@ -5,7 +5,12 @@
 $ npm install
 ```
 
-## Running the application
+## Running the application for SLACK
 ``` bash
-$ SLACK={slack key} APIAI={api.ai key} npm start
+$ SLACK={slack key} APIAI={api.ai key} npm run slack
+```
+
+## Running the application for KAKAO
+``` bash
+$ APIAI={api.ai key} npm run kakao
 ```
