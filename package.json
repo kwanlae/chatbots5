@@ -4,7 +4,7 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "slack": "node bot.js",
+    "slack": "node slack.js",
     "kakao": "node kakao.js"
   },
   "keywords": [],

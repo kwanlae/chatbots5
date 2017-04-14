@@ -1,4 +1,3 @@
-// const keys = require('./keys');
 const keys = {
 	botAPIToken: process.env.SLACK,
 	apiaiToken: process.env.APIAI
@@ -6,8 +5,8 @@ const keys = {
 
 const botkit = require('botkit');
 const apiaiBotkit = require('api-ai-botkit');
-
 const apiai = apiaiBotkit(keys.apiaiToken);
+
 const controller = botkit.slackbot({
 	debug: false,
 	log: true
@@ -19,8 +18,12 @@ const botScope = [
 	'mention'
 ];
 
-controller.hears('안녕', botScope, (bot, message) => {
-	bot.reply(message, '안녕, 난 봇이야.');
+const {QUERIES, ACTIONS} = require('./intents');
+
+Object.keys(QUERIES).forEach((query) => {
+	controller.hears(query, botScope, (bot, message) => {
+		bot.reply(message, QUERIES[query]);
+	});
 });
 
 controller.hears('.*', botScope, (bot, message) => {
@@ -31,24 +34,11 @@ apiai.all((message, resp, bot) => {
 	console.log(resp.result.action);
 });
 
-const actionsDefault = [
-	'input.unknown',
-	'input.welcome'
-];
-
-actionsDefault.forEach((action) => {
+Object.keys(ACTIONS).forEach((action) => {
 	apiai.action(action, (message, resp, bot) => {
-		const responseText = resp.result.fulfillment.speech;
-		bot.reply(message, responseText);
+		const text = ACTIONS[action](resp.result);
+		bot.reply(message, text);
 	});
-});
-
-apiai.action('plus', (message, resp, bot) => {
-	const x = Number(resp.result.parameters.x);
-	const y = Number(resp.result.parameters.y);
-	const sum = x + y;
-
-	bot.reply(message, `${sum} 일거야.`);
 });
 
 controller.spawn({
