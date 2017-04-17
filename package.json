@@ -4,8 +4,11 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "slack": "node slack.js",
-    "kakao": "node kakao.js"
+    "slack": "nodemon ./messengers/slack.js",
+    "kakao": "nodemon ./messengers/kakao.js",
+    "facebook": "nodemon ./messengers/facebook.js",
+    "line": "nodemon ./messengers/line.js",
+    "wechat": "nodemon ./messengers/wechat.js"
   },
   "keywords": [],
   "author": "kwanlae@gmail.com",
@@ -14,7 +17,10 @@
     "api-ai-botkit": "^1.1.1",
     "body-parser": "^1.17.1",
     "botkit": "^0.5.2",
+    "dotenv": "^4.0.0",
     "express": "^4.15.2",
-    "request": "^2.81.0"
+    "express-xml-bodyparser": "^0.3.0",
+    "request": "^2.81.0",
+    "xml": "^1.0.1"
   }
 }

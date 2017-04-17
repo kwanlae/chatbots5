@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const keys = {
 	botAPIToken: process.env.SLACK,
 	apiaiToken: process.env.APIAI
@@ -12,13 +14,9 @@ const controller = botkit.slackbot({
 	log: true
 });
 
-const botScope = [
-	'direct_message',
-	'direct_mention',
-	'mention'
-];
+const botScope = ['direct_message', 'direct_mention', 'mention'];
 
-const {QUERIES, ACTIONS} = require('./intents');
+const {QUERIES, ACTIONS} = require('../engines/intents');
 
 Object.keys(QUERIES).forEach((query) => {
 	controller.hears(query, botScope, (bot, message) => {

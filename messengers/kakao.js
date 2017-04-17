@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const bodyParser = require('body-parser');
 const express = require('express');
 const request = require('request');
@@ -15,7 +17,7 @@ app.get('/keyboard', (req, res) => {
 	res.json({type: 'text'});
 });
 
-const {QUERIES, ACTIONS} = require('./intents');
+const {QUERIES, ACTIONS} = require('../engines/intents');
 
 app.post('/message', (req, res) => {
 	const response = (text) => {
