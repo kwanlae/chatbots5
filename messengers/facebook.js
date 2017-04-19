@@ -1,37 +1,34 @@
 require('dotenv').config();
+const LOG_FLAG = 'FACEBOOK';
 
-const bodyParser = require('body-parser');
+const axios = require('axios');
 const express = require('express');
-const request = require('request');
+
+const log = require('../log');
+const {QUERIES, ACTIONS} = require('../engines/intents');
+const getIntent = require('../engines/apiai');
 
 const app = express();
 
-app.set('port', (process.env.PORT || 9090));
+const router = express.Router();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-
-const {QUERIES, ACTIONS} = require('../engines/intents');
-
-// webhook validation
-app.get('/webhook', (req, res) => {
+router.get('/webhook', (req, res) => {
 	if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === '__HELLO__') {
-		console.log("Validating webhook");
+		log.info(LOG_FLAG, 'validating webhook');
+
 		res.status(200).send(req.query['hub.challenge']);
 	} else {
-		console.error("Failed validation. Make sure the validation tokens match.");
+		log.info(LOG_FLAG, 'Failed validation. Make sure the validation tokens match.');
+
 		res.sendStatus(403);
 	}
 });
 
-// Message processing
-app.post('/webhook', (req, res) => {
-	console.log(req.body);
-	var data = req.body;
+router.post('/webhook', (req, res) => {
+	const data = req.body;
 
 	// Make sure this is a page subscription
 	if (data.object === 'page') {
-
 		// Iterate over each entry - there may be multiple if batched
 		data.entry.forEach((entry) => {
 			// Iterate over each messaging event
@@ -39,7 +36,7 @@ app.post('/webhook', (req, res) => {
 				if (event.message) {
 					receivedMessage(event);
 				} else {
-					console.log("Webhook received unknown event: ", event);
+					log.info(LOG_FLAG, `Webhook received unknown event: ${event}`)
 				}
 			});
 		});
@@ -57,66 +54,47 @@ function receivedMessage(event) {
 		message
 	} = event;
 
-	console.log(`Received message for user ${senderID} and page ${recipientID} at ${timeOfMessage} with message:`);
-	console.log(JSON.stringify(message));
+	log.info(LOG_FLAG, `Received message for user ${senderID} and page ${recipientID} at ${timeOfMessage} with message:`);
 
 	const {mid: messageId, text: messageText} = message;
+	const answer = QUERIES(messageText);
 
-	if (QUERIES[messageText]) {
-		return sendTextMessage(senderID, QUERIES[messageText]);
-	}
+	if (answer) {
+		sendTextMessage(senderID, answer).then((response) => {
+			log.chat(LOG_FLAG, messageText, answer);
 
-	if (messageText) {
-		const options = {
-			url: 'https://api.api.ai/v1/query?v=20150910',
-			method: 'POST',
-			'headers': {
-				'Content-Type': 'application/json; charset=utf-8',
-				'Authorization': `Bearer ${process.env.APIAI}`
-			},
-			json: {
-				query: messageText,
-				lang: 'en',
-				sessionId: new Date().getTime()
-			}
-		}
-
-		request(options, (err, resp, body) => {
-			console.log(body);
-
-			const {result: {action}, result} = body;
+			const {recipient_id: recipientId, message_id: messageId} = response.data;
+			log.info(LOG_FLAG, `Successfully sent generic message with id ${messageId} to recipient ${recipientId}`);
+		}).catch(console.error);
+	} else {
+		getIntent({
+			query: messageText,
+			sessionId: new Date().getTime()
+		}).then((response) => {
+			const {result, result: {action}} = response.data;
 			const text = ACTIONS[action](result);
 
-			sendTextMessage(senderID, text);
-		});
+			return sendTextMessage(senderID, text);
+		}).then((response) => {
+			log.chat(LOG_FLAG, messageText, JSON.parse(response.config.data).message.text);
+
+			const {recipient_id: recipientId, message_id: messageId} = response.data;
+			log.info(LOG_FLAG,`Successfully sent generic message with id ${messageId} to recipient ${recipientId}`);
+		}).catch(console.error);
 	}
 }
 
 function sendTextMessage(recipientId, messageText) {
-	const messageData = {
-		recipient: {id: recipientId},
-		message: {text: messageText}
+	const options = {
+		url: `https://graph.facebook.com/v2.6/me/messages?access_token=${process.env.PAGE_TOKEN}`,
+		method: 'POST',
+		data: {
+			recipient: {id: recipientId},
+			message: {text: messageText}
+		}
 	};
 
-	// callSendAPI(messageData);
-
-	request({
-		uri: 'https://graph.facebook.com/v2.6/me/messages',
-		qs: {access_token: process.env.PAGE_TOKEN},
-		method: 'POST',
-		json: messageData
-	}, (error, response, body) => {
-		if (!error && response.statusCode === 200) {
-			const {recipient_id: recipientId, message_id: messageId} = body;
-
-			console.log(`Successfully sent generic message with id ${messageId} to recipient ${recipientId}`);
-		} else {
-			console.error("Unable to send message.");
-		}
-	});
-
+	return axios(options);
 }
 
-app.listen(app.get('port'), () => {
-	console.log(`app listening on port ${app.get('port')}`);
-});
+module.exports = router;

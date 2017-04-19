@@ -1,26 +1,28 @@
 {
-  "name": "slackbot30Minutes",
-  "version": "0.0.2",
+  "name": "chatbots5",
+  "version": "0.0.4",
   "description": "",
-  "main": "bot.js",
+  "main": "",
   "scripts": {
-    "slack": "nodemon ./messengers/slack.js",
-    "kakao": "nodemon ./messengers/kakao.js",
-    "facebook": "nodemon ./messengers/facebook.js",
-    "line": "nodemon ./messengers/line.js",
-    "wechat": "nodemon ./messengers/wechat.js"
+    "slack": "node ./apps/appSlack.js",
+    "kakao": "node ./apps/appKakao.js",
+    "facebook": "node ./apps/appFacebook.js",
+    "line": "node ./apps/appLine.js",
+    "wechat": "node ./apps/appWechat.js",
+    "all": "node ./apps/appAll.js"
   },
   "keywords": [],
   "author": "kwanlae@gmail.com",
   "license": "MIT",
   "dependencies": {
     "api-ai-botkit": "^1.1.1",
+    "axios": "^0.16.1",
     "body-parser": "^1.17.1",
     "botkit": "^0.5.2",
     "dotenv": "^4.0.0",
     "express": "^4.15.2",
     "express-xml-bodyparser": "^0.3.0",
-    "request": "^2.81.0",
+    "moment": "^2.18.1",
     "xml": "^1.0.1"
   }
 }

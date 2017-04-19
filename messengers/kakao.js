@@ -1,26 +1,22 @@
 require('dotenv').config();
+const LOG_FLAG = 'KAKAO';
 
-const bodyParser = require('body-parser');
 const express = require('express');
-const request = require('request');
 
-const app = express();
+const log = require('../log');
+const {QUERIES, ACTIONS} = require('../engines/intents');
+const getIntent = require('../engines/apiai');
 
-app.set('port', (process.env.PORT || 9090));
+const router = express.Router();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-
-app.get('/keyboard', (req, res) => {
-	console.log(req.headers);
+router.get('/keyboard', (req, res) => {
+	log.info(LOG_FLAG, req.headers);
 
 	res.json({type: 'text'});
 });
 
-const {QUERIES, ACTIONS} = require('../engines/intents');
-
-app.post('/message', (req, res) => {
-	const response = (text) => {
+router.post('/message', (req, res) => {
+	const resp = (text) => {
 		return res.json({
 			message: {text: text},
 			keyboard: {type: 'text'}
@@ -28,35 +24,24 @@ app.post('/message', (req, res) => {
 	}
 
 	const query = req.body.content;
+	const answer = QUERIES(query);
 
-	if (QUERIES[query]) {
-		return response(QUERIES[query]);
+	if (answer) {
+		log.chat(LOG_FLAG, query, answer);
+
+		return resp(answer);
 	}
 
-	const options = {
-		url: 'https://api.api.ai/v1/query?v=20150910',
-		method: 'POST',
-		'headers': {
-			'Content-Type': 'application/json; charset=utf-8',
-			'Authorization': `Bearer ${process.env.APIAI}`
-		},
-		json: {
-			query: query,
-			lang: 'en',
-			sessionId: new Date().getTime()
-		}
-	}
-
-	request(options, (err, resp, body) => {
-		console.log(body);
-
-		const {result, result: {action}} = body;
+	getIntent({
+		query: query,
+		sessionId: new Date().getTime()
+	}).then((response) => {
+		const {result, result: {action}} = response.data;
 		const text = ACTIONS[action](result);
+		log.chat(LOG_FLAG, result.resolvedQuery, text);
 
-		response(text);
-	});
+		resp(text);
+	}).catch(console.error);
 });
 
-app.listen(app.get('port'), () => {
-	console.log(`app listening on port ${app.get('port')}`);
-});
+module.exports = router;

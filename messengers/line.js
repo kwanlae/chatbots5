@@ -1,89 +1,63 @@
 require('dotenv').config();
+const LOG_FLAG = 'LINE';
 
-const bodyParser = require('body-parser');
+const axios = require('axios');
 const express = require('express');
-const request = require('request');
 
-const app = express();
-
-app.set('port', (process.env.PORT || 9090));
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-
+const log = require('../log');
 const {QUERIES, ACTIONS} = require('../engines/intents');
+const getIntent = require('../engines/apiai');
 
-app.post('/line/webhook', (req, res) => {
+const router = express.Router();
+
+router.post('/webhook', (req, res) => {
 	const {message: {text: query}, replyToken} = req.body.events[0];
+	const answer = QUERIES(query);
 
-	if (QUERIES[query]) {
+	if (answer) {
 		replyMessage({
 			replyToken: replyToken,
-			text: QUERIES[query]
-		}, () => {
-			return res.sendStatus(200);
-		});
+			text: answer
+		}).then((response) => {
+			log.chat(LOG_FLAG, query, answer);
+
+			res.sendStatus(200);
+		}).catch(console.error);
 	} else {
-		getAction({
+		getIntent({
 			query: query,
 			sessionId: new Date().getTime()
-		}, (text) => {
-			replyMessage({
+		}).then((response) => {
+			const {result, result: {action}} = response.data;
+			const text = ACTIONS[action](result);
+
+			return replyMessage({
 				replyToken: replyToken,
 				text: text
-			}, () => {
-				res.sendStatus(200);
 			});
-		});
+		}).then((response) => {
+			log.chat(LOG_FLAG, query, JSON.parse(response.config.data).messages[0].text);
+
+			res.sendStatus(200);
+		}).catch(console.error);
 	}
 });
 
-function replyMessage({replyToken, text}, callback) {
+function replyMessage({replyToken, text}) {
 	const options = {
 		url: 'https://api.line.me/v2/bot/message/reply',
 		method: 'POST',
-		'headers': {
+		headers: {
 			'Content-Type': 'application/json; charset=utf-8',
-			'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
+			Authorization: `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
 		},
-		json: {
+		data: {
 			replyToken: replyToken,
 			messages: [{type: 'text', text: text}]
 		}
 	}
 
-	request(options, (err, resp, body) => {
-		console.log(body);
-
-		callback();
-	});
+	return axios(options);
 }
 
-function getAction({query, sessionId}, callback) {
-	const options = {
-		url: 'https://api.api.ai/v1/query?v=20150910',
-		method: 'POST',
-		'headers': {
-			'Content-Type': 'application/json; charset=utf-8',
-			'Authorization': `Bearer ${process.env.APIAI}`
-		},
-		json: {
-			query: query,
-			lang: 'en',
-			sessionId: sessionId
-		}
-	};
-
-	request(options, (err, resp, body) => {
-		console.log(body);
-
-		const {result, result: {action}} = body;
-		const text = ACTIONS[action](result);
-
-		callback(text);
-	});
-}
-
-app.listen(app.get('port'), () => {
-	console.log(`app listening on port ${app.get('port')}`);
-});
+module.exports = router;

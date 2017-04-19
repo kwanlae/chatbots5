@@ -1,45 +1,42 @@
 require('dotenv').config();
+const LOG_FLAG = 'WECHAT';
 
-const bodyParser = require('body-parser');
 const express = require('express');
-const request = require('request');
+
 const xml = require('xml');
-const xmlparser = require('express-xml-bodyparser');
 
-const app = express();
-
-app.set('port', (process.env.PORT || 9090));
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(xmlparser());
-
+const log = require('../log');
 const {QUERIES, ACTIONS} = require('../engines/intents');
+const getIntent = require('../engines/apiai');
 
-app.get('/wechat', (req, res) => {
-	console.log(req.headers);
-	console.log(req.query);
+const router = express.Router();
+
+router.get('/', (req, res) => {
+	log.info(LOG_FLAG, req.headers);
 
 	res.status(200).send(req.query.echostr);
 });
 
-app.post('/wechat', (req, res) => {
-	console.log(req.body.xml);
-
+router.post('/', (req, res) => {
 	const {content: [query]} = req.body.xml;
+	const answer = QUERIES(query);
 
-	if (QUERIES[query]) {
-		const reply = getReplyMessage(req.body.xml, QUERIES[query]);
+	if (answer) {
+		log.chat(LOG_FLAG, query, answer);
 
+		const reply = getReplyMessage(req.body.xml, answer);
 		res.set('Content-Type', 'text/xml');
 		res.send(reply);
 	} else {
-		getAction({
+		getIntent({
 			query: query,
 			sessionId: new Date().getTime()
-		}, (text) => {
-			const reply = getReplyMessage(req.body.xml, text);
+		}).then((response) => {
+			const {result, result: {action}} = response.data;
+			const text = ACTIONS[action](result);
+			log.chat(LOG_FLAG, result.resolvedQuery, text);
 
+			const reply = getReplyMessage(req.body.xml, text);
 			res.set('Content-Type', 'text/xml');
 			res.send(reply);
 		});
@@ -60,31 +57,4 @@ function getReplyMessage({fromusername: [fromUserName], tousername: [toUserName]
 	return xml(xmlString);
 }
 
-function getAction({query, sessionId}, callback) {
-	const options = {
-		url: 'https://api.api.ai/v1/query?v=20150910',
-		method: 'POST',
-		'headers': {
-			'Content-Type': 'application/json; charset=utf-8',
-			'Authorization': `Bearer ${process.env.APIAI}`
-		},
-		json: {
-			query: query,
-			lang: 'en',
-			sessionId: sessionId
-		}
-	};
-
-	request(options, (err, resp, body) => {
-		console.log(body);
-
-		const {result, result: {action}} = body;
-		const text = ACTIONS[action](result);
-
-		callback(text);
-	});
-}
-
-app.listen(app.get('port'), () => {
-	console.log(`app listening on port ${app.get('port')}`);
-});
+module.exports = router;

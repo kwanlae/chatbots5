@@ -1,4 +1,4 @@
-# slackbot30Minutes
+# chatbots5
 
 ## Installation
 ``` bash
@@ -31,4 +31,14 @@ $ npm run facebook
 ## Running the application for LINE
 ``` bash
 $ npm run line
+```
+
+## Running the application for WECHAT
+``` bash
+$ npm run wechat
+```
+
+## Running the all applications
+``` bash
+$ npm run all
 ```
