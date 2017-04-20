@@ -11,6 +11,13 @@ const getIntent = require('../engines/apiai');
 const router = express.Router();
 
 router.post('/webhook', (req, res) => {
+	if (req.body.events.length === 2
+		&& req.body.events[0].replyToken === '00000000000000000000000000000000'
+		&& req.body.events[1].replyToken === 'ffffffffffffffffffffffffffffffff') {
+		console.log('validated');
+		return res.sendStatus(200);
+	}
+
 	const {message: {text: query}, replyToken} = req.body.events[0];
 	const answer = QUERIES(query);
 
