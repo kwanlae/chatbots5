@@ -37,7 +37,13 @@ router.post('/message', (req, res) => {
 		sessionId: new Date().getTime()
 	}).then((response) => {
 		const {result, result: {action}} = response.data;
-		const text = ACTIONS[action](result);
+
+		let text;
+		if (ACTIONS[action]) {
+			text = ACTIONS[action](result);
+		} else {
+			text = result.fulfillment.speech;
+		}
 		log.chat(LOG_FLAG, result.resolvedQuery, text);
 
 		resp(text);
